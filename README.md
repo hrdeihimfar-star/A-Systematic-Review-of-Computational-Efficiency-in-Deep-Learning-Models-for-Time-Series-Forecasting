@@ -22,7 +22,10 @@ This PRISMA-P systematic review examines computational efficiency in deep learni
 All scripts use documented API versions. See `/code/README.md` for setup.
 
 ## Citation
-https://doi.org/10.1136/bmj.n160
+## Citation
+Deihimfar, H. R. (2026). Beyond Accuracy: A Systematic Review of Computational Efficiency 
+in Deep Learning Models for Time Series Forecasting – Protocol v1.4. 
+Zenodo. https://doi.org/10.1136/bmj.n160
 
 ## License
 CC BY 4.0

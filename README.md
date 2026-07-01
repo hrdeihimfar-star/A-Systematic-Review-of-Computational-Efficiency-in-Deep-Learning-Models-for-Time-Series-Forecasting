@@ -22,7 +22,7 @@ This PRISMA-P systematic review examines computational efficiency in deep learni
 All scripts use documented API versions. See `/code/README.md` for setup.
 
 ## Citation
-[Format after Zenodo publication]
+https://doi.org/10.1136/bmj.n160
 
 ## License
 CC BY 4.0

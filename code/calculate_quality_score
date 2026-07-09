@@ -1,0 +1,122 @@
+import os
+import pandas as pd
+
+# =====================================================
+# Configuration
+# =====================================================
+MAX_SCORE = 22
+INVALID_VALUES = {
+    "", "NR", "n/r", "not reported", "not explicitly discussed",
+    "none", "nan", "-"
+}
+
+# =====================================================
+# Helper Functions
+# =====================================================
+def is_valid(value):
+    if pd.isna(value):
+        return False
+    val = str(value).strip().lower()
+    return val not in INVALID_VALUES
+
+# =====================================================
+# Quality Score Calculation
+# =====================================================
+def calculate_quality_score(row):
+    score = 0
+
+    # 1. Core Study Description (0–3)
+    if is_valid(row.get("Application_Domain")): score += 1
+    if is_valid(row.get("Forecasting_Task_Type")): score += 1
+    if is_valid(row.get("Forecasting_Horizon")): score += 1
+
+    # 2. Dataset Quality (0–2)
+    if is_valid(row.get("Datasets_Name_and_Source")): score += 1
+    if is_valid(row.get("Number_of_Variables_or_Features")): score += 1
+
+    # 3. Model Transparency (0–2)
+    if is_valid(row.get("Model_Family")): score += 1
+    if is_valid(row.get("Specific_Model_Names")): score += 1
+
+    # 4. Baseline Comparison (0–1)
+    if is_valid(row.get("Baseline_Models")): score += 1
+
+    # 5. Accuracy Reporting (0–2)
+    accuracy_columns = ["RMSE", "MAE", "MAPE_or_sMAPE", "Other_Metrics"]
+    score += min(2, sum(is_valid(row.get(col)) for col in accuracy_columns))
+
+    # 6. Efficiency Reporting (0–4)
+    efficiency_columns = [
+        "FLOPs_or_MACs", "Computational_Complexity", "Number_of_Trainable_Parameters",
+        "Model_Storage_Size_MB_or_GB", "Training_Time", "Inference_or_Prediction_Latency_or_Time",
+        "Peak_Memory_Usage", "GPU_or_CPU_Hours", "Energy_Consumption", "Carbon_Footprint"
+    ]
+    eff_count = sum(is_valid(row.get(col)) for col in efficiency_columns)
+    if eff_count >= 8:      score += 4
+    elif eff_count >= 6:    score += 3
+    elif eff_count >= 4:    score += 2
+    elif eff_count >= 2:    score += 1
+
+    # 7. Hardware & Deployment (0–2)
+    if is_valid(row.get("Hardware_Configuration")): score += 1
+    if is_valid(row.get("Deployment_Context")): score += 1
+
+    # 8. Reproducibility (0–3)
+    availability = str(row.get("Code_or_Data_Availability", "")).lower()
+    if any(k in availability for k in ["github", "code available", "source code"]):
+        score += 1
+    if any(k in availability for k in ["dataset available", "data available", "public dataset"]):
+        score += 1
+    if is_valid(row.get("Reproducibility_Notes")):
+        score += 1
+
+    # 9. Limitations & Evidence (0–2)
+    if is_valid(row.get("Limitations_Reported_by_Authors")): score += 1
+    if is_valid(row.get("Evidence_Source")): score += 1
+
+    # 10. Scalability Analysis (0–1)
+    if is_valid(row.get("Scalability_Analysis")): score += 1
+
+    return min(score, MAX_SCORE)
+
+
+# =====================================================
+# Main Execution
+# =====================================================
+if __name__ == "__main__":
+    excel_file = "Extracted_articles.xlsx"
+    
+    if not os.path.exists(excel_file):
+        print(f"File not found: {excel_file}")
+        raise SystemExit(1)
+
+    df = pd.read_excel(excel_file)
+    print(f"Number of papers loaded: {len(df)}")
+
+    df["Quality_Score"] = df.apply(calculate_quality_score, axis=1)
+
+    output_file = "Extracted_articles_with_QualityScore.xlsx"
+    df.to_excel(output_file, index=False)
+
+    print("\n" + "="*50)
+    print("Quality Score calculation completed successfully!")
+    print("="*50)
+    print(f"Maximum possible score : {MAX_SCORE}")
+    print(f"Output saved to     : {output_file}")
+
+    print("\nScore Distribution:")
+    print(df["Quality_Score"].value_counts().sort_index(ascending=False))
+
+    print("\nTop 10 Papers:")
+    print(
+        df.sort_values("Quality_Score", ascending=False)[
+            ["Final_ID", "First_Author_et_al", "Publication_Year", "Quality_Score"]
+        ].head(10)
+    )
+
+    print("\nBottom 5 Papers:")
+    print(
+        df.sort_values("Quality_Score")[
+            ["Final_ID", "First_Author_et_al", "Publication_Year", "Quality_Score"]
+        ].head(5)
+    )
